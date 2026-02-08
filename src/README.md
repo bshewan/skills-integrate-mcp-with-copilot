@@ -29,6 +29,8 @@ A super simple FastAPI application that allows students to view and sign up for 
    }
    ```
    
+   **Important**: The `teachers.json` file is excluded from version control for security. Each deployment should have its own copy with unique credentials.
+   
    To generate a bcrypt hash for a password:
    
    ```python

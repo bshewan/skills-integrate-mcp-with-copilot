@@ -14,6 +14,7 @@ from pathlib import Path
 import json
 from typing import Optional
 import bcrypt
+import secrets
 
 app = FastAPI(title="Mergington High School API",
               description="API for viewing and signing up for extracurricular activities")
@@ -127,17 +128,19 @@ def login(credentials: LoginRequest):
     
     # Verify password using bcrypt
     stored_hash = teachers[credentials.username]
-    # Support both hashed and plaintext passwords for backward compatibility during migration
+    password_valid = False
+    
+    # Try bcrypt verification first
     try:
-        if stored_hash.startswith('$2b$') or stored_hash.startswith('$2a$') or stored_hash.startswith('$2y$'):
-            # It's a bcrypt hash
-            if not bcrypt.checkpw(credentials.password.encode('utf-8'), stored_hash.encode('utf-8')):
-                raise HTTPException(status_code=401, detail="Invalid credentials")
-        else:
-            # Plaintext password (deprecated, for backward compatibility)
-            if stored_hash != credentials.password:
-                raise HTTPException(status_code=401, detail="Invalid credentials")
-    except ValueError:
+        if bcrypt.checkpw(credentials.password.encode('utf-8'), stored_hash.encode('utf-8')):
+            password_valid = True
+    except (ValueError, Exception):
+        # If bcrypt fails, fall back to constant-time plaintext comparison for backward compatibility
+        # Note: Plaintext passwords are deprecated and should be migrated to bcrypt hashes
+        if secrets.compare_digest(stored_hash, credentials.password):
+            password_valid = True
+    
+    if not password_valid:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # Create a simple session token
