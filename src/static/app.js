@@ -30,10 +30,14 @@ document.addEventListener("DOMContentLoaded", () => {
           updateUIForAuthentication(data.username);
         } else {
           localStorage.removeItem("sessionToken");
+          updateUIForLogout();
         }
       } catch (error) {
         console.error("Error checking auth:", error);
+        updateUIForLogout();
       }
+    } else {
+      updateUIForLogout();
     }
     fetchActivities();
   }
@@ -45,9 +49,6 @@ document.addEventListener("DOMContentLoaded", () => {
     logoutBtn.classList.remove("hidden");
     signupForm.style.display = "block";
   }
-  
-  // Initialize UI - hide signup form by default
-  signupForm.style.display = "none";
 
   // Reset UI for non-authenticated
   function updateUIForLogout() {

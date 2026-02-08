@@ -127,16 +127,16 @@ def login(credentials: LoginRequest):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # Verify password using bcrypt
+    # Note: stored_hash is always a string from JSON, but we encode to bytes for bcrypt
     stored_hash = teachers[credentials.username]
     
     try:
-        # Ensure both password and hash are bytes
         password_bytes = credentials.password.encode('utf-8')
-        hash_bytes = stored_hash.encode('utf-8') if isinstance(stored_hash, str) else stored_hash
+        hash_bytes = stored_hash.encode('utf-8')
         
         if not bcrypt.checkpw(password_bytes, hash_bytes):
             raise HTTPException(status_code=401, detail="Invalid credentials")
-    except (ValueError, TypeError) as e:
+    except (ValueError, TypeError):
         # If bcrypt fails (e.g., invalid hash format), reject authentication
         # This ensures only properly hashed passwords are accepted
         raise HTTPException(status_code=401, detail="Invalid credentials")
