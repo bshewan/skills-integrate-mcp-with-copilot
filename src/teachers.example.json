@@ -1,0 +1,5 @@
+{
+  "teachers": {
+    "teacher_username": "$2b$12$...<bcrypt_hashed_password>..."
+  }
+}

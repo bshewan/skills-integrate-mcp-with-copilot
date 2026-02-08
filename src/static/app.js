@@ -30,10 +30,14 @@ document.addEventListener("DOMContentLoaded", () => {
           updateUIForAuthentication(data.username);
         } else {
           localStorage.removeItem("sessionToken");
+          updateUIForLogout();
         }
       } catch (error) {
         console.error("Error checking auth:", error);
+        updateUIForLogout();
       }
+    } else {
+      updateUIForLogout();
     }
     fetchActivities();
   }
@@ -90,9 +94,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const response = await fetch(
-        `/login?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
+        "/login",
         {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ username, password }),
         }
       );
 
