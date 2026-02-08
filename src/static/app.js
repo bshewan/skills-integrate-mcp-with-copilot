@@ -45,6 +45,9 @@ document.addEventListener("DOMContentLoaded", () => {
     logoutBtn.classList.remove("hidden");
     signupForm.style.display = "block";
   }
+  
+  // Initialize UI - hide signup form by default
+  signupForm.style.display = "none";
 
   // Reset UI for non-authenticated
   function updateUIForLogout() {
@@ -90,9 +93,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const response = await fetch(
-        `/login?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
+        "/login",
         {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ username, password }),
         }
       );
 

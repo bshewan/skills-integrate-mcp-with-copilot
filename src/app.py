@@ -8,10 +8,12 @@ for extracurricular activities at Mergington High School.
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
 import os
 from pathlib import Path
 import json
 from typing import Optional
+import bcrypt
 
 app = FastAPI(title="Mergington High School API",
               description="API for viewing and signing up for extracurricular activities")
@@ -24,11 +26,27 @@ app.mount("/static", StaticFiles(directory=os.path.join(Path(__file__).parent,
 # Load teacher credentials from teachers.json
 def load_teachers():
     teachers_file = Path(__file__).parent / "teachers.json"
-    with open(teachers_file, 'r') as f:
-        data = json.load(f)
-    return data.get("teachers", {})
+    try:
+        with open(teachers_file, 'r') as f:
+            data = json.load(f)
+        return data.get("teachers", {})
+    except FileNotFoundError:
+        raise RuntimeError(
+            f"Teacher credentials file not found at {teachers_file}. "
+            "Please create a teachers.json file with teacher credentials."
+        )
+    except json.JSONDecodeError as e:
+        raise RuntimeError(
+            f"Invalid JSON in teachers.json: {e}. "
+            "Please ensure the file contains valid JSON with a 'teachers' object."
+        )
 
 # In-memory session storage (maps session tokens to teacher usernames)
+# NOTE: This is a simple in-memory implementation suitable for single-process development only.
+# In production, sessions should use:
+# - A shared store (Redis, database) for multi-worker/multi-server deployments
+# - Session expiration/TTL to prevent unbounded memory growth
+# - Secure session token generation and storage
 sessions = {}
 teachers = load_teachers()
 
@@ -91,24 +109,43 @@ activities = {
 }
 
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
 @app.get("/")
 def root():
     return RedirectResponse(url="/static/index.html")
 
 
 @app.post("/login")
-def login(username: str, password: str):
+def login(credentials: LoginRequest):
     """Authenticate a teacher and create a session"""
-    if username not in teachers or teachers[username] != password:
+    if credentials.username not in teachers:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # Verify password using bcrypt
+    stored_hash = teachers[credentials.username]
+    # Support both hashed and plaintext passwords for backward compatibility during migration
+    try:
+        if stored_hash.startswith('$2b$') or stored_hash.startswith('$2a$') or stored_hash.startswith('$2y$'):
+            # It's a bcrypt hash
+            if not bcrypt.checkpw(credentials.password.encode('utf-8'), stored_hash.encode('utf-8')):
+                raise HTTPException(status_code=401, detail="Invalid credentials")
+        else:
+            # Plaintext password (deprecated, for backward compatibility)
+            if stored_hash != credentials.password:
+                raise HTTPException(status_code=401, detail="Invalid credentials")
+    except ValueError:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # Create a simple session token
-    import hashlib
     import uuid
     session_token = str(uuid.uuid4())
-    sessions[session_token] = username
+    sessions[session_token] = credentials.username
     
-    return {"session_token": session_token, "username": username}
+    return {"session_token": session_token, "username": credentials.username}
 
 
 @app.post("/logout")

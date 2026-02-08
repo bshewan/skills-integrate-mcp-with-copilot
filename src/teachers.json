@@ -1,7 +1,7 @@
 {
   "teachers": {
-    "mrsmith": "password123",
-    "mschen": "secure456",
-    "mrjones": "teacherpass789"
+    "mrsmith": "$2b$12$A8Ug3kkG5C9H1K5sDDcKv./psyxbekvD8sOAHHBbLYTQR6qq7qKmu",
+    "mschen": "$2b$12$SSfzjDQn.n8/kVW/eiCHAO.WSdGIpDP3NQ7tX9Gr8hIOG3s5V.GQC",
+    "mrjones": "$2b$12$Wq5A6dzbxULY.hcqQdMeIOng6ecl9TyEsDJP.XR8u3fMYFaJaSNTe"
   }
 }

@@ -5,32 +5,73 @@ A super simple FastAPI application that allows students to view and sign up for 
 ## Features
 
 - View all available extracurricular activities
-- Sign up for activities
+- Sign up for activities (requires teacher authentication)
+- Teacher authentication with secure password hashing
+- Session-based access control
 
 ## Getting Started
 
 1. Install the dependencies:
 
    ```
-   pip install fastapi uvicorn
+   pip install -r requirements.txt
    ```
 
-2. Run the application:
+2. Set up teacher credentials:
+
+   Create a `teachers.json` file in the `src` directory (you can copy from `teachers.example.json`):
+   
+   ```json
+   {
+     "teachers": {
+       "username": "$2b$12$...<bcrypt_hashed_password>..."
+     }
+   }
+   ```
+   
+   To generate a bcrypt hash for a password:
+   
+   ```python
+   import bcrypt
+   password = "your_password"
+   hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+   print(hashed.decode('utf-8'))
+   ```
+
+3. Run the application:
 
    ```
    python app.py
    ```
 
-3. Open your browser and go to:
+4. Open your browser and go to:
+   - Web interface: http://localhost:8000
    - API documentation: http://localhost:8000/docs
    - Alternative documentation: http://localhost:8000/redoc
+
+## Authentication
+
+The application uses session-based authentication for teachers:
+
+- Teachers must log in to register or unregister students
+- Students can view activities and participants without logging in
+- Sessions are stored in-memory (suitable for single-process development only)
+
+**Note**: For production use, implement:
+- Shared session store (Redis, database) for multi-worker deployments
+- Session expiration/TTL
+- Secure session token storage
 
 ## API Endpoints
 
 | Method | Endpoint                                                          | Description                                                         |
 | ------ | ----------------------------------------------------------------- | ------------------------------------------------------------------- |
+| POST   | `/login`                                                          | Authenticate a teacher and receive a session token                  |
+| POST   | `/logout?session_token={token}`                                   | Logout and invalidate session                                       |
+| GET    | `/auth/check?session_token={token}`                               | Check if a session token is valid                                   |
 | GET    | `/activities`                                                     | Get all activities with their details and current participant count |
-| POST   | `/activities/{activity_name}/signup?email=student@mergington.edu` | Sign up for an activity                                             |
+| POST   | `/activities/{activity_name}/signup?email=student@mergington.edu&session_token={token}` | Sign up for an activity (requires authentication) |
+| DELETE | `/activities/{activity_name}/unregister?email=student@mergington.edu&session_token={token}` | Unregister from an activity (requires authentication) |
 
 ## Data Model
 
