@@ -15,6 +15,7 @@ import json
 from typing import Optional
 import bcrypt
 import secrets
+import threading
 
 app = FastAPI(title="Mergington High School API",
               description="API for viewing and signing up for extracurricular activities")
@@ -49,6 +50,7 @@ def load_teachers():
 # - Session expiration/TTL to prevent unbounded memory growth
 # - Secure session token generation and storage
 sessions = {}
+sessions_lock = threading.Lock()  # Protect against concurrent access
 teachers = load_teachers()
 
 # In-memory activity database
@@ -143,7 +145,8 @@ def login(credentials: LoginRequest):
     
     # Create a cryptographically secure session token
     session_token = secrets.token_urlsafe(32)
-    sessions[session_token] = credentials.username
+    with sessions_lock:
+        sessions[session_token] = credentials.username
     
     return {"session_token": session_token, "username": credentials.username}
 
@@ -151,17 +154,20 @@ def login(credentials: LoginRequest):
 @app.post("/logout")
 def logout(session_token: str):
     """Logout a teacher and destroy their session"""
-    if session_token in sessions:
-        del sessions[session_token]
-        return {"message": "Logged out successfully"}
+    with sessions_lock:
+        if session_token in sessions:
+            del sessions[session_token]
+            return {"message": "Logged out successfully"}
     raise HTTPException(status_code=401, detail="Invalid session")
 
 
 @app.get("/auth/check")
 def check_auth(session_token: Optional[str] = None):
     """Check if a user is authenticated"""
-    if session_token and session_token in sessions:
-        return {"authenticated": True, "username": sessions[session_token]}
+    if session_token:
+        with sessions_lock:
+            if session_token in sessions:
+                return {"authenticated": True, "username": sessions[session_token]}
     return {"authenticated": False}
 
 
@@ -174,8 +180,9 @@ def get_activities():
 def signup_for_activity(activity_name: str, email: str, session_token: Optional[str] = None):
     """Sign up a student for an activity (requires teacher authentication)"""
     # Verify authentication
-    if not session_token or session_token not in sessions:
-        raise HTTPException(status_code=401, detail="Requires teacher login")
+    with sessions_lock:
+        if not session_token or session_token not in sessions:
+            raise HTTPException(status_code=401, detail="Requires teacher login")
     
     # Validate activity exists
     if activity_name not in activities:
@@ -200,8 +207,9 @@ def signup_for_activity(activity_name: str, email: str, session_token: Optional[
 def unregister_from_activity(activity_name: str, email: str, session_token: Optional[str] = None):
     """Unregister a student from an activity (requires teacher authentication)"""
     # Verify authentication
-    if not session_token or session_token not in sessions:
-        raise HTTPException(status_code=401, detail="Requires teacher login")
+    with sessions_lock:
+        if not session_token or session_token not in sessions:
+            raise HTTPException(status_code=401, detail="Requires teacher login")
     
     # Validate activity exists
     if activity_name not in activities:

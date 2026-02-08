@@ -24,10 +24,12 @@ A super simple FastAPI application that allows students to view and sign up for 
    ```json
    {
      "teachers": {
-       "username": "$2b$12$...<bcrypt_hashed_password>..."
+       "teacher1": "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5NU7667LlnWhS"
      }
    }
    ```
+   
+   **Note**: The example hash above is for the password "example_password". Each deployment should generate unique hashes for their actual passwords.
    
    **Important**: The `teachers.json` file is excluded from version control for security. Each deployment should have its own copy with unique credentials.
    
