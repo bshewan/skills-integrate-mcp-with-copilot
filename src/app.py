@@ -15,6 +15,7 @@ import json
 from typing import Optional
 import bcrypt
 import secrets
+import uuid
 
 app = FastAPI(title="Mergington High School API",
               description="API for viewing and signing up for extracurricular activities")
@@ -128,23 +129,16 @@ def login(credentials: LoginRequest):
     
     # Verify password using bcrypt
     stored_hash = teachers[credentials.username]
-    password_valid = False
     
-    # Try bcrypt verification first
     try:
-        if bcrypt.checkpw(credentials.password.encode('utf-8'), stored_hash.encode('utf-8')):
-            password_valid = True
+        if not bcrypt.checkpw(credentials.password.encode('utf-8'), stored_hash.encode('utf-8')):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
     except (ValueError, Exception):
-        # If bcrypt fails, fall back to constant-time plaintext comparison for backward compatibility
-        # Note: Plaintext passwords are deprecated and should be migrated to bcrypt hashes
-        if secrets.compare_digest(stored_hash, credentials.password):
-            password_valid = True
-    
-    if not password_valid:
+        # If bcrypt fails (e.g., invalid hash format), reject authentication
+        # This ensures only properly hashed passwords are accepted
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # Create a simple session token
-    import uuid
     session_token = str(uuid.uuid4())
     sessions[session_token] = credentials.username
     
